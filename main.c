@@ -15,60 +15,48 @@ int buffer_index=0;
 int in_buffer_index = 0;
 
 // Power On Self Test
-/*
 int post(void)
 {
-	// Start timer
-	timer_start();
+	// Start echo timer
+	timer5_start();
 	
+	// Clear any events
+	if (timer5_event() & 0xF)
+		timer5_capture();
 	
-	uint32_t time = timer_count();
+	timer2_start();
+
+	uint32_t time = timer5_count();
 	
 	// Store times for two pulses
 	uint32_t pulse_one = 0;
 	uint32_t pulse_two = 0;
 	
-	// Run for 100 milliseconds
-	while( (timer_count() - time) < 100000)
+	// Run for 1000 microseconds
+	while( (timer5_count() - time) < 1000)
 	{
 		// Check for timer event (rising edge seen on pa1)
-		if (timer_event() & 0xF)
+		if (timer5_event() & 0xF)
 		{
 			if (pulse_one == 0)
-				pulse_one = timer_capture();
+			{
+				pulse_one = timer5_capture();
+			}
 			else if (pulse_two == 0)
-				pulse_two = timer_capture();
+				pulse_two = timer5_capture();
 		}
 	}
 	
-	timer_stop();
+	timer2_stop();
+	timer5_stop();
+	
 
-	// Ensure we have seen a complete pulse (two rising edges) within 100ms
-	//if (events_captured > 2)
-	if ((pulse_two - pulse_one < 100000) && (pulse_two != 0))
-		return 1;
+	
+	// Ensure we have seen a complete pulse (two rising edges) at least 300us
+	if ((pulse_two - pulse_one > 300) && (pulse_two != 0))
+		return (pulse_two - pulse_one);
 	return 0;
 	
-}*/
-
-int getInt(void)
-{
-	char rxByte;
-	
-	in_buffer_index = 0;
-	while((rxByte != '\r') && (in_buffer_index < BufferSize - 2))
-	{
-		rxByte = USART_Read(USART2); //Read the input and store it into rxByte
-		if((rxByte != '\r') && (rxByte >= '0') && (rxByte <= '9'))
-		{
-			USART_Write(USART2, (uint8_t *)&rxByte, 1);
-			inBuffer[in_buffer_index] = rxByte;
-			in_buffer_index++;
-		}
-	}
-	inBuffer[in_buffer_index] = '\0';
-	
-	return atoi((char *)inBuffer);
 }
 
 
@@ -79,13 +67,19 @@ int main(void)
 	UART2_Init();	
   timer2_pwm_init();
 	timer5_init();
+	
+
+	
+
+	
 	timer2_start();
 	timer5_start();
 
 	setDuty(2, 1);	
-	
-	// Begin Measurements
-	sprintf((char *)buffer, "\n\rBeginning measurements...\r\n");
+			// Begin Measurements (For some reason, this causes the measurements to get way off)
+	//sprintf((char *)buffer, "\n\rBeginning measurements...\r\n");
+	//USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
+
 	int readings = 0;
 	uint32_t measurement = 0;
 	uint32_t count = 0;
