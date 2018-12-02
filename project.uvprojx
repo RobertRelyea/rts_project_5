@@ -422,11 +422,6 @@
               <FilePath>.\startup_stm32l476xx.s</FilePath>
             </File>
             <File>
-              <FileName>input_pa1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Drivers\input_pa1.c</FilePath>
-            </File>
-            <File>
               <FileName>UART.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Drivers\UART.c</FilePath>
@@ -445,6 +440,16 @@
               <FileName>tim2.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Drivers\tim2.c</FilePath>
+            </File>
+            <File>
+              <FileName>tim5.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Drivers\tim5.c</FilePath>
+            </File>
+            <File>
+              <FileName>input_pa2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Drivers\input_pa2.c</FilePath>
             </File>
           </Files>
         </Group>

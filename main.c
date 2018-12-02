@@ -2,126 +2,124 @@
 #include "Drivers/SysClock.h"
 #include "Drivers/UART.h"
 #include "Drivers/tim2.h"
-#include "Drivers/LED.h"
-#include "servo_states.h"
+#include "Drivers/tim5.h"
 
+#include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
-events parseInput(char input)
+char RxComByte = 0;
+uint8_t inBuffer[BufferSize];
+uint8_t buffer[BufferSize];
+int buffer_index=0;
+int in_buffer_index = 0;
+
+// Power On Self Test
+/*
+int post(void)
 {
-	// Handle user input
-	if (input == 'C' || input == 'c') // Continue
-		return resume;
-	else if (input == 'P' || input == 'p') // Pause
-		return pause;
-	else if (input == 'L' || input == 'l') // move_left
-		return move_left;
-	else if (input == 'R' || input == 'r') // move_right
-		return move_right;
-	else if (input == 'B' || input == 'b') // begin
-		return begin;
-    else if (input == 'X' || input == 'x') // Terminate command
-        return terminate;
-	return nop;
+	// Start timer
+	timer_start();
+	
+	
+	uint32_t time = timer_count();
+	
+	// Store times for two pulses
+	uint32_t pulse_one = 0;
+	uint32_t pulse_two = 0;
+	
+	// Run for 100 milliseconds
+	while( (timer_count() - time) < 100000)
+	{
+		// Check for timer event (rising edge seen on pa1)
+		if (timer_event() & 0xF)
+		{
+			if (pulse_one == 0)
+				pulse_one = timer_capture();
+			else if (pulse_two == 0)
+				pulse_two = timer_capture();
+		}
+	}
+	
+	timer_stop();
+
+	// Ensure we have seen a complete pulse (two rising edges) within 100ms
+	//if (events_captured > 2)
+	if ((pulse_two - pulse_one < 100000) && (pulse_two != 0))
+		return 1;
+	return 0;
+	
+}*/
+
+int getInt(void)
+{
+	char rxByte;
+	
+	in_buffer_index = 0;
+	while((rxByte != '\r') && (in_buffer_index < BufferSize - 2))
+	{
+		rxByte = USART_Read(USART2); //Read the input and store it into rxByte
+		if((rxByte != '\r') && (rxByte >= '0') && (rxByte <= '9'))
+		{
+			USART_Write(USART2, (uint8_t *)&rxByte, 1);
+			inBuffer[in_buffer_index] = rxByte;
+			in_buffer_index++;
+		}
+	}
+	inBuffer[in_buffer_index] = '\0';
+	
+	return atoi((char *)inBuffer);
 }
 
-int main()
+
+int main(void)
 {
-    // Initialize Devices
+  // Initialize Devices
 	System_Clock_Init();
-	UART2_Init();
-    timer2_pwm_init();
+	UART2_Init();	
+  timer2_pwm_init();
+	timer5_init();
 	timer2_start();
-	LED_Init();
-	initServos();
-    
-	// Place new command indicator
-	newLine(USART2);
-	putLine(USART2, ">");
+	timer5_start();
+
+	setDuty(2, 1);	
 	
-	// Space to store user input chars
-	uint8_t user_input;
-    events user_events[2];
-	uint8_t input_idx = 0;
-	
-    
+	// Begin Measurements
+	sprintf((char *)buffer, "\n\rBeginning measurements...\r\n");
+	int readings = 0;
+	uint32_t measurement = 0;
+	uint32_t count = 0;
+	uint32_t prev_count = 0;
 	while(1)
 	{
-		// Track time required for UI, state processing, servo commands
-		uint32_t start_time = timer2_count();
-        
-        
-		// Check for user input
-		if(USART_Received(USART2))
-		{
-			if (input_idx < 2) // Append to input command
-            {
-				user_input = getChar(USART2);
-                user_events[input_idx] = parseInput(user_input);
-                
-                // Check for termination of current command
-                // (And increment input_idx++)
-                if (user_events[input_idx++] == terminate)
-                {
-                    // Reset input buffer index
-                    input_idx = 0;
-                    
-                    // Place new command indicator
-                    newLine(USART2);
-                    putLine(USART2, ">");
-                }
-            }
+		// First Measurement
+		// Wait for timer_event
+		while((timer5_event() & 0xF) == 0)
+		{}
+//		sprintf((char *)buffer, "Event\r\n");
+//		USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
 			
-			else // Input command fully constructed, wait for CR
-			{
-				// Check for carraige return
-				if (getChar(USART2) == '\r')
-				{
-					// Determine events input by user
-					processInput(user_events[0], user_events[1]);
-				}
-				// Reset input buffer index
-				input_idx = 0;
-				
-				// Place new command indicator
-				newLine(USART2);
-				putLine(USART2, ">");
-			}
-		}
-		
-        // Run recipe state machine
-		recipeStep();
-		
-        // Process state for LEDs
-        switch (servo1.recipe.status)
-		{
-			case status_running:
-				Green_LED_On();
-                Red_LED_Off();
-				break;
-			case status_paused:
-                Red_LED_Off();
-                Green_LED_Off();
-                break;
-			case status_command_error:
-                Red_LED_On();
-                Green_LED_Off();
-                break;
-			case status_nested_error:
-                Green_LED_On();
-                Red_LED_On();
-                break;
-			case status_ended:
-				Red_LED_Off();
-                Green_LED_Off();
-                break;
-		}			
-        
-        // Determine time consumed
-		uint32_t time_elapsed = get_timer2_elapsed(start_time);
-		
-        // Block for the duration of the 100ms loop period
-		waitFor(100 - time_elapsed);
-	} 
+		// Read current TIM2 channel 2 counter value
+		prev_count = timer5_capture();
+			
+		// Wait for timer_event
+		while((timer5_event() & 0xF) == 0)
+		{}
+		// Read current TIM2 channel 2 counter value
+		count = timer5_capture();
+			
+		measurement = count - prev_count;
+		readings++;
+		sprintf((char *)buffer, "measurement: %dmm\r\n", (measurement*10) / 58);
+		USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
+	}
+	sprintf((char *)buffer, "count: %d\r\n", count);
+	USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
+	
+	sprintf((char *)buffer, "prev_count: %d\r\n", prev_count);
+	USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
+	
+	
+
 }
 

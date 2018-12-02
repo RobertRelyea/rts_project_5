@@ -2,10 +2,7 @@
 #define TIM2_H
 
 #include "stm32l476xx.h"
-#include "input_pa1.h"
 
-// Sets up the TIM2 registers for Channel 2 on PA1
-void timer2_init(void);
 void timer2_pwm_init(void);
 
 void timer2_start(void);
