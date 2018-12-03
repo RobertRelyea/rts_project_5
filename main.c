@@ -116,7 +116,10 @@ int main(void)
 			
 			char reply = getChar(USART2);
 			if(reply != 'y' && reply != 'Y')
+			{
+				post_value = 0;
 				break;
+			}
 		}
 	}
 	
@@ -128,6 +131,8 @@ int main(void)
 	sprintf((char *)buffer, "Beginning measurements...\r\n");
 	USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
 	
+	
+	
 	setDuty(2, 1);
 	while(timer2_count() > TIM2->CCR3);
 	
@@ -138,7 +143,7 @@ int main(void)
 	// Display first Measurement
 	measurement = measure_ultrasonic();
 	// Check if first measurement is valid
-	if(measurement < 1000 && measurement > 50)
+	if(measurement < 500 && measurement > 50)
 	{
 		sprintf((char *)buffer, "First measurement: %d mm\r\n", measurement);
 		USART_Write(USART2,(uint8_t *)buffer, strlen((char *)buffer));
@@ -161,7 +166,7 @@ int main(void)
 		measurement = measure_ultrasonic();
 
 		// Check if measurement is invalid
-		if (measurement < 50 || measurement > 1000)
+		if (measurement < 50 || measurement > 500)
 			continue;
 		
 		// Valid measurement, add to measurments array
@@ -177,7 +182,7 @@ int main(void)
 	timer5_stop();
 
 	uint32_t max_measurement = 50;
-	uint32_t min_measurement = 1000;
+	uint32_t min_measurement = 500;
 	
 	int i = 0;
 	// Print out measurements
