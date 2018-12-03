@@ -19,7 +19,7 @@ void timer2_pwm_init()
     /******        TIM2 SETUP        ******/
     
 	// Enable TIM2 in the APB1 clock enable register 1
-	RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;   
+	RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
     
 	// Set prescaler value for TIM2
 	TIM2->PSC = 8000;
@@ -46,7 +46,7 @@ void timer2_pwm_init()
 	
   // Upcounting from 0 to 999 (period of 1000 * clock period)
 	// 100 ms -> 10 hz
-	TIM2->ARR = 999;                 
+	TIM2->ARR = 999;
   // Set UG bit in EGR register for force update
 	TIM2->EGR |= TIM_EGR_UG;         
 }
@@ -67,7 +67,7 @@ void setDuty(int channel, int duty_cycle)
 		case 4: // Channel 4
 			TIM2->CCR4 = duty_cycle;
 			break;
-	}		
+	}
 }
 
 void timer2_start()
